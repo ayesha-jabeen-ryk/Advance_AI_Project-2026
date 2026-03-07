@@ -90,6 +90,8 @@ Advance_AI_Project-2026/
 │   └── architecture.png
 │
 └── team.txt
+```
+
 ### Folder and File Description
 
 - **app.py**  
