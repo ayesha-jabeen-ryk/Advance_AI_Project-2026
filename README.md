@@ -158,18 +158,6 @@ Advance_AI_Project-2026/
 ```bash
 git clone https://github.com/ayesha-jabeen-ryk/Advance_AI_Project-2026.git
 cd Advance_AI_Project-2026
-2. Create a virtual environment
 python -m venv .venv
-3. Activate the virtual environment
-
-On Windows PowerShell:
-
-.venv\Scripts\Activate.ps1
-
-On Command Prompt:
-
-.venv\Scripts\activate.bat
-4. Install required packages
 pip install -r requirements.txt
-5. Run the application
 streamlit run app.py
