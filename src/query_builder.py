@@ -23,4 +23,15 @@ def build_query(question: str) -> str:
         LIMIT 1
         """
 
+    if "capital of france" in q:
+        return """
+        PREFIX dbo: <http://dbpedia.org/ontology/>
+        PREFIX dbr: <http://dbpedia.org/resource/>
+
+        SELECT ?capital WHERE {
+          dbr:France dbo:capital ?capital .
+        }
+        LIMIT 1
+        """
+
     return ""
