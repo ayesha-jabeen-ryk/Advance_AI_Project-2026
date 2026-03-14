@@ -47,7 +47,7 @@ Before running this project, make sure the following tools are installed:
 - **Visual Studio Code**
 - **Git**
 - **Internet connection** for accessing the DBpedia endpoint
-- optionally, **API access credentials** if an LLM-based query generation module is added later
+- In process, **API access credentials** Trying to get API for integration in this project
 
 Required Python packages may include:
 
@@ -68,28 +68,28 @@ The project is organized as follows:
 Advance_AI_Project-2026/
 │
 ├── app.py
-├── requirements.txt
+├── evaluate_questions.py
 ├── README.md
+├── requirements.txt
 ├── .gitignore
 ├── .env
 ├── .env.example
+├── team.txt
 │
 ├── data/
 │   ├── working_questions.txt
 │   ├── non_working_questions.txt
-│   └── sample_questions.json
-│
-├── src/
-│   ├── dbpedia_client.py
-│   ├── query_builder.py
-│   ├── answer_formatter.py
-│   ├── llm_client.py
-│   └── utils.py
+│   └── evaluation_report.txt
 │
 ├── docs/
 │   └── architecture.png
 │
-└── team.txt
+└── src/
+    ├── answer_formatter.py
+    ├── dbpedia_client.py
+    ├── llm_client.py
+    ├── query_builder.py
+    └── utils.py
 ```
 
 ### Folder and File Description
@@ -107,7 +107,7 @@ Advance_AI_Project-2026/
   Defines files and folders that should not be tracked in Git, such as virtual environments, cache files, and secrets.
 
 - **.env**  
-  Stores local environment variables such as API keys or configuration values. This file should not be pushed to GitHub.
+  Stores local environment variables such as API keys or configuration values.
 
 - **.env.example**  
   Example template for environment variables, so other users know which values they need to provide locally.
