@@ -152,6 +152,43 @@ Advance_AI_Project-2026/
   Contains the names of team members and optionally their roles or responsibilities in the project.
 
 ---
+## Evaluation
+
+The system was evaluated using a curated set of natural language questions covering multiple categories, including simple fact questions, date/time questions, list questions, filter questions, and compound questions.
+
+### Summary
+- Total tested questions: 21
+- Working questions: 19
+- Non-working questions: 2
+
+### Working categories
+- Simple fact questions
+- Date / time questions
+- List / collection questions
+- Filter questions
+- Compound / multiple triple questions
+
+### Notes
+The evaluation is based on whether the system was able to:
+1. generate a SPARQL query,
+2. execute the query on DBpedia,
+3. receive at least one result.
+
+Some queries may still require manual semantic inspection, since a returned result does not always guarantee that every row is perfectly aligned with the intended meaning of the question.
+
+The final tested question sets are stored in:
+- `data/working_questions.txt`
+- `data/non_working_questions.txt`
+- `data/evaluation_report.txt`
+
+
+## Current Limitations
+
+- The current system mainly uses rule-based question matching with predefined templates.
+- Some DBpedia properties are inconsistent or incomplete for certain entities.
+- Some advanced or ternary-style questions return zero rows.
+- A query returning results does not always guarantee perfect semantic precision.
+- LLM-assisted fallback using SAIA is planned, but final integration depends on receiving a valid API key.
 
 ## How to Build and Run the Project
 

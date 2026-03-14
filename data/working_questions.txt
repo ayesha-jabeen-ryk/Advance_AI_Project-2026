@@ -1,3 +1,19 @@
 What is the capital of Germany?
-Who is the spouse of Barack Obama?
 What is the capital of France?
+Who is the spouse of Barack Obama?
+Where was Albert Einstein born?
+When was Barack Obama born?
+When was Google founded?
+When did World War II start?
+Which cities are in Germany?
+Which films were directed by Christopher Nolan?
+Which universities are in Berlin?
+Which rivers are in France?
+Which cities in Germany have population greater than 1000000?
+Which people were born after 1950?
+Which rivers in France are longer than 500000?
+Which films were directed by Christopher Nolan and starred Leonardo DiCaprio?
+Which universities in Berlin have more than 20000 students?
+Which scientists were born in Germany and died in the United States?
+Which people were born in Germany and received the Nobel Prize?
+Which films directed by Christopher Nolan were released after 2010?

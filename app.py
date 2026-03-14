@@ -12,6 +12,11 @@ st.set_page_config(
 )
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
+def cached_run_query(query: str):
+    return run_sparql_query(query)
+
+
 def extract_bindings(result: dict) -> list[dict]:
     return result.get("results", {}).get("bindings", [])
 
@@ -44,37 +49,37 @@ def get_first_entity_uri(bindings: list[dict]) -> str | None:
     return None
 
 
+@st.cache_data(show_spinner=False, ttl=3600)
 def get_entity_details(entity_uri: str) -> dict:
     detail_query = f"""
     PREFIX dbo: <http://dbpedia.org/ontology/>
-    PREFIX dbp: <http://dbpedia.org/property/>
     PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
     PREFIX foaf: <http://xmlns.com/foaf/0.1/>
 
-    SELECT ?label ?abstract ?thumbnail WHERE {{
+    SELECT
+      (SAMPLE(?label_en) AS ?label)
+      (SAMPLE(?abstract_en) AS ?abstract)
+      (SAMPLE(?thumbnail_uri) AS ?thumbnail)
+    WHERE {{
       OPTIONAL {{
-        <{entity_uri}> rdfs:label ?label .
-        FILTER(LANG(?label) = 'en')
+        <{entity_uri}> rdfs:label ?label_en .
+        FILTER(LANG(?label_en) = 'en')
       }}
       OPTIONAL {{
-        <{entity_uri}> dbo:abstract ?abstract .
-        FILTER(LANG(?abstract) = 'en')
+        <{entity_uri}> dbo:abstract ?abstract_en .
+        FILTER(LANG(?abstract_en) = 'en')
       }}
       OPTIONAL {{
-        <{entity_uri}> rdfs:comment ?abstract .
-        FILTER(LANG(?abstract) = 'en')
+        <{entity_uri}> dbo:thumbnail ?thumbnail_uri .
       }}
       OPTIONAL {{
-        <{entity_uri}> dbo:thumbnail ?thumbnail .
-      }}
-      OPTIONAL {{
-        <{entity_uri}> foaf:depiction ?thumbnail .
+        <{entity_uri}> foaf:depiction ?thumbnail_uri .
       }}
     }}
-    LIMIT 1
     """
+
     try:
-        result = run_sparql_query(detail_query)
+        result = cached_run_query(detail_query)
         bindings = extract_bindings(result)
 
         if not bindings:
@@ -105,21 +110,23 @@ def get_entity_details(entity_uri: str) -> dict:
 def detect_question_category(question: str) -> str:
     q = question.lower().strip()
 
-    if "when" in q or "date" in q or "born" in q:
+    if "when" in q or "born" in q or "founded" in q or "end" in q or "after" in q or "before" in q:
         return "Date / Time Question"
-    if "list" in q or q.startswith("which") or q.startswith("name all"):
-        return "List / Collection Question"
-    if "greater than" in q or "less than" in q or "after" in q or "before" in q:
+    if "greater than" in q or "less than" in q or "more than" in q:
         return "Filter Question"
     if " and " in q:
         return "Compound / Multiple Triple Question"
+    if q.startswith("which") or q.startswith("list") or q.startswith("name all"):
+        return "List / Collection Question"
     return "Simple Fact Question"
 
 
-def reset_app():
-    for key in ["last_result", "last_query", "last_error", "question_input"]:
-        if key in st.session_state:
-            del st.session_state[key]
+def clear_state():
+    st.session_state["question_input"] = ""
+    st.session_state["last_result"] = None
+    st.session_state["last_query"] = ""
+    st.session_state["last_error"] = ""
+    st.session_state["last_question"] = ""
 
 
 if "question_input" not in st.session_state:
@@ -134,16 +141,19 @@ if "last_query" not in st.session_state:
 if "last_error" not in st.session_state:
     st.session_state["last_error"] = ""
 
+if "last_question" not in st.session_state:
+    st.session_state["last_question"] = ""
+
 
 # -------------------------
 # Header
 # -------------------------
-col_icon, col_title = st.columns([1, 14])
+icon_col, title_col = st.columns([1, 14])
 
-with col_icon:
+with icon_col:
     st.markdown("## 🌐")
 
-with col_title:
+with title_col:
     st.title("DBpedia Question Answering System")
     st.caption(
         "Ask natural language questions about people, places, films, dates, and more using the DBpedia Knowledge Graph."
@@ -157,7 +167,7 @@ st.markdown("---")
 with st.container(border=True):
     st.subheader("Ask a Question")
     st.write(
-        "Enter a question in natural language. The system will generate a SPARQL query, retrieve results from DBpedia, and display the answer in a user-friendly format."
+        "Enter a question in natural language. The system generates a SPARQL query, retrieves results from DBpedia, and displays the answer in a user-friendly format."
     )
 
     st.markdown("**Example questions:**")
@@ -190,13 +200,11 @@ with btn_col1:
     get_answer_clicked = st.button("Get Answer", width="stretch", key="get_answer_btn")
 
 with btn_col2:
-    reset_clicked = st.button("Reset", width="stretch", key="reset_btn")
-
-if reset_clicked:
-    reset_app()
-    st.rerun()
+    st.button("Reset", width="stretch", key="reset_btn", on_click=clear_state)
 
 if get_answer_clicked:
+    st.session_state["last_question"] = question
+
     if not question.strip():
         st.session_state["last_error"] = "Please enter a question."
         st.session_state["last_result"] = None
@@ -210,7 +218,7 @@ if get_answer_clicked:
             st.session_state["last_result"] = None
         else:
             try:
-                result = run_sparql_query(query)
+                result = cached_run_query(query)
                 st.session_state["last_result"] = result
                 st.session_state["last_error"] = ""
             except Exception as exc:
@@ -227,6 +235,7 @@ if st.session_state["last_result"]:
     result = st.session_state["last_result"]
     bindings = extract_bindings(result)
     df = bindings_to_dataframe(bindings) if bindings else pd.DataFrame()
+    saved_question = st.session_state.get("last_question", "")
 
     st.markdown("---")
     st.markdown("## Results Overview")
@@ -234,7 +243,7 @@ if st.session_state["last_result"]:
     overview_col1, overview_col2, overview_col3 = st.columns(3)
 
     with overview_col1:
-        st.metric("Question Type", detect_question_category(question))
+        st.metric("Question Type", detect_question_category(saved_question))
 
     with overview_col2:
         st.metric("Rows Returned", len(bindings))
@@ -242,7 +251,6 @@ if st.session_state["last_result"]:
     with overview_col3:
         st.metric("Status", "Success")
 
-    # 3 main sections
     tab1, tab2, tab3 = st.tabs(["Answer", "SPARQL Query", "Details"])
 
     # -------------------------
@@ -259,7 +267,6 @@ if st.session_state["last_result"]:
                 st.success(answer_value)
             elif len(df) == 1:
                 st.dataframe(df, width="stretch", hide_index=True)
-
             else:
                 st.info("Multiple results found. Displaying them in a table.")
                 st.dataframe(df, width="stretch", hide_index=True)
@@ -284,36 +291,33 @@ if st.session_state["last_result"]:
         else:
             details = get_entity_details(entity_uri)
 
-            if not details:
-                st.warning("Could not retrieve additional entity details.")
-            else:
-                left_col, right_col = st.columns([1, 2])
+            left_col, right_col = st.columns([1, 2])
 
-                with left_col:
-                    if details.get("thumbnail"):
-                        st.image(details["thumbnail"], width="stretch")
+            with left_col:
+                if details.get("thumbnail"):
+                    st.image(details["thumbnail"], width="stretch")
+                else:
+                    st.info("No image available.")
 
+            with right_col:
+                st.markdown(f"### {details.get('label', 'Entity')}")
+                st.write(f"**DBpedia URI:** {details.get('uri', '')}")
+
+                wikipedia_link = details.get("uri", "").replace(
+                    "http://dbpedia.org/resource/",
+                    "https://en.wikipedia.org/wiki/",
+                )
+                st.markdown(f"**Wikipedia:** [Open article]({wikipedia_link})")
+
+                show_summary = st.toggle("Show concise summary", key="show_summary_toggle")
+
+                if show_summary:
+                    abstract_text = details.get("abstract", "").strip()
+
+                    if abstract_text:
+                        short_summary = abstract_text[:600]
+                        if len(abstract_text) > 600:
+                            short_summary += "..."
+                        st.success(short_summary)
                     else:
-                        st.info("No image available.")
-
-                with right_col:
-                    st.markdown(f"### {details.get('label', 'Entity')}")
-                    st.write(f"**DBpedia URI:** {details.get('uri', '')}")
-
-                    wikipedia_link = details.get("uri", "").replace(
-                        "http://dbpedia.org/resource/", "https://en.wikipedia.org/wiki/"
-                    )
-                    st.markdown(f"**Wikipedia:** [Open article]({wikipedia_link})")
-
-                    show_summary = st.button("Show Concise Summary", key="show_summary_button")
-
-                    if show_summary:
-                        abstract_text = details.get("abstract", "").strip()
-
-                        if abstract_text:
-                            short_summary = abstract_text[:500]
-                            if len(abstract_text) > 500:
-                                short_summary += "..."
-                            st.success(short_summary)
-                        else:
-                            st.warning("No summary available for this entity in DBpedia.")
+                        st.warning("No summary available for this entity in DBpedia.")
