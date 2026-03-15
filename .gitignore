@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 .env
 .streamlit/
+test_saia.py
+test_saia_simple.py
