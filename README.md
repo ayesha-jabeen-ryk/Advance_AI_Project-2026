@@ -217,18 +217,26 @@ git clone https://github.com/ayesha-jabeen-ryk/Advance_AI_Project-2026.git
 cd Advance_AI_Project-2026
 ```
 
-### Create a virtual environment
+### 2. Create a virtual environment
 ```bash
 python -m venv .venv
 ```
 
-### Activate the virtual environment
+### 3. Activate the virtual environment
+```bash
 .venv\Scripts\Activate.ps1
-### Install dependencies
+```
+### 4. Install dependencies
+```bash
 pip install -r requirements.txt
-### Configure environment variables
+```
+### 5. Configure environment variables
+```bash
 SAIA_API_KEY=your_api_key_here
 SAIA_BASE_URL=https://chat-ai.academiccloud.de/v1
 SAIA_MODEL=meta-llama-3.1-8b-instruct
-### Run the Streamlit application
+```
+### 6. Run the Streamlit application
+```bash
 streamlit run app.py
+```
