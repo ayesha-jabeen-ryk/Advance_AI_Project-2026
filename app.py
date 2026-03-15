@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from urllib.parse import unquote
-
+from src.llm_client import generate_sparql_with_llm
 from src.query_builder import build_query
 from src.dbpedia_client import run_sparql_query
 
@@ -167,7 +167,7 @@ st.markdown("---")
 with st.container(border=True):
     st.subheader("Ask a Question")
     st.write(
-        "Enter a question in natural language. The system generates a SPARQL query, retrieves results from DBpedia, and displays the answer in a user-friendly format."
+        "Enter a question in natural language. The system generates a SPARQL query, retrieves results from DBpedia, and displays the answer in a user-friendly format.The system first tries rule-based SPARQL generation and then uses SAIA as a fallback for unsupported questions."
     )
 
     st.markdown("**Example questions:**")
@@ -211,9 +211,19 @@ if get_answer_clicked:
         st.session_state["last_query"] = ""
     else:
         query = build_query(question)
-        st.session_state["last_query"] = query
 
         if not query:
+            try:
+                query = generate_sparql_with_llm(question)
+            except Exception as exc:
+                st.session_state["last_error"] = f"LLM fallback failed: {exc}"
+                st.session_state["last_result"] = None
+                st.session_state["last_query"] = ""
+                query = ""
+
+        st.session_state["last_query"] = query
+
+        if not query or query.strip().upper() == "UNSUPPORTED":
             st.session_state["last_error"] = "This question type is not supported yet."
             st.session_state["last_result"] = None
         else:

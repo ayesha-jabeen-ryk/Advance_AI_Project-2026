@@ -39,6 +39,23 @@ In short:
 
 ---
 
+## Architecture 
+
+The system follows a hybrid question answering workflow:
+
+1. The user enters a natural language question in the Streamlit interface.
+2. The system first tries the rule-based query builder to match the question with a predefined SPARQL template.
+3. If no rule matches, the system uses the SAIA LLM fallback to generate a SPARQL query.
+4. The generated SPARQL query is executed on the DBpedia SPARQL endpoint.
+5. The returned result is processed and formatted for display.
+6. The Streamlit application shows the final answer, the generated SPARQL query, and additional entity details such as image, summary, and links when available.
+
+In short:
+
+**User Question → Rule-Based Query Builder → SAIA Fallback (if needed) → DBpedia → Result Processing → Streamlit Output**
+
+---
+
 ## Prerequisites
 
 Before running this project, make sure the following tools are installed:
@@ -47,7 +64,7 @@ Before running this project, make sure the following tools are installed:
 - **Visual Studio Code**
 - **Git**
 - **Internet connection** for accessing the DBpedia endpoint
-- In process, **API access credentials** Trying to get API for integration in this project
+- **SAIA API access credentials** for LLM-assisted fallback integration
 
 Required Python packages may include:
 
@@ -55,8 +72,9 @@ Required Python packages may include:
 - `requests`
 - `SPARQLWrapper`
 - `python-dotenv`
+- `openai`
 
-These dependencies will be listed in the `requirements.txt` file.
+These dependencies are listed in the `requirements.txt` file.
 
 ---
 
@@ -197,6 +215,20 @@ The final tested question sets are stored in:
 ```bash
 git clone https://github.com/ayesha-jabeen-ryk/Advance_AI_Project-2026.git
 cd Advance_AI_Project-2026
+```
+
+### Create a virtual environment
+```bash
 python -m venv .venv
+```
+
+### Activate the virtual environment
+.venv\Scripts\Activate.ps1
+### Install dependencies
 pip install -r requirements.txt
+### Configure environment variables
+SAIA_API_KEY=your_api_key_here
+SAIA_BASE_URL=https://chat-ai.academiccloud.de/v1
+SAIA_MODEL=meta-llama-3.1-8b-instruct
+### Run the Streamlit application
 streamlit run app.py
