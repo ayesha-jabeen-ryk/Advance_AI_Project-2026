@@ -54,6 +54,39 @@ In short:
 
 **User Question → Rule-Based Query Builder → SAIA Fallback (if needed) → DBpedia → Result Processing → Streamlit Output**
 
+## System Architecture Diagram
+
+```mermaid
+flowchart TD
+
+A[User (Streamlit UI)] --> B[app.py]
+
+B --> C[Question Processing]
+C --> D[Rule-Based Query Builder]
+
+D --> E[SPARQL Query]
+
+E --> F[DBpedia Client]
+F --> G[DBpedia SPARQL Endpoint]
+
+G --> F
+F --> H[Query Result]
+
+H --> I[Result Processing]
+I --> J[Formatted Answer]
+
+J --> K[Display in Streamlit UI]
+
+C --> L[SAIA LLM Fallback]
+L --> E
+
+H --> M[Entity Extraction]
+M --> N[Entity Details Query]
+N --> G
+N --> O[Entity Info (Image, Summary)]
+O --> K
+```
+
 ---
 
 ## Prerequisites
