@@ -86,7 +86,6 @@ N --> G
 N --> O[Entity Info (Image, Summary)]
 O --> K
 ```
-
 ---
 
 ## Prerequisites
