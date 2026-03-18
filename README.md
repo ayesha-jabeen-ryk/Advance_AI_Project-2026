@@ -54,6 +54,10 @@ In short:
 
 **User Question → Rule-Based Query Builder → SAIA Fallback (if needed) → DBpedia → Result Processing → Streamlit Output**
 
+
+## System Architecture Diagram
+
+![System Architecture](docs/architecture.png)
 ---
 
 ## Prerequisites
