@@ -1,3 +1,4 @@
+import re
 def normalize_question(question: str) -> str:
     q = question.lower().strip()
     q = q.replace("?", "").replace(".", "").replace(",", "")
@@ -32,6 +33,22 @@ def build_query(question: str) -> str:
         LIMIT 1
         """
 
+    if "spouse of" in q or "who is the spouse of" in q:
+      import re
+      match = re.search(r"spouse of (.+)", q)
+      if match:
+        person = match.group(1).strip()
+
+        return f"""
+        PREFIX dbo: <http://dbpedia.org/ontology/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+        SELECT ?spouse WHERE {{
+          ?person rdfs:label "{person.title()}"@en .
+          ?person dbo:spouse ?spouse .
+        }}
+        LIMIT 1
+        """
     if "spouse of barack obama" in q:
         return """
         PREFIX dbo: <http://dbpedia.org/ontology/>
@@ -57,17 +74,24 @@ def build_query(question: str) -> str:
     # -------------------------
     # Date / time questions
     # -------------------------
-    if "when was barack obama born" in q:
-        return """
-        PREFIX dbo: <http://dbpedia.org/ontology/>
-        PREFIX dbr: <http://dbpedia.org/resource/>
+    # -----------------------------
 
-        SELECT ?birthDate WHERE {
-          dbr:Barack_Obama dbo:birthDate ?birthDate .
-        }
+    if "when was" in q and "born" in q:
+      match = re.search(r"when was (.+?) born", q)
+      if match:
+        person = match.group(1).strip()
+
+        return f"""
+        PREFIX dbo: <http://dbpedia.org/ontology/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+        SELECT ?birthDate WHERE {{
+          ?person rdfs:label "{person.title()}"@en .
+          ?person dbo:birthDate ?birthDate .
+        }}
         LIMIT 1
         """
-
+    
     if "when was google founded" in q:
         return """
         PREFIX dbo: <http://dbpedia.org/ontology/>
@@ -93,6 +117,30 @@ def build_query(question: str) -> str:
     # -------------------------
     # List / collection questions
     # -------------------------
+    # -----------------------------
+# WHICH CITIES ARE IN X (GENERAL)
+# -----------------------------
+    import re
+    if "cities" in q and "in" in q:
+      match = re.search(r"(cities.*in|list cities in|which cities are in) (.+)", q)
+      if match:
+        country = match.group(2).strip()
+
+        return f"""
+        PREFIX dbo: <http://dbpedia.org/ontology/>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+        SELECT DISTINCT ?cityLabel WHERE {{
+          ?city a dbo:City .
+          ?city dbo:country ?country .
+          ?country rdfs:label "{country.title()}"@en .
+
+          ?city rdfs:label ?cityLabel .
+          FILTER(LANG(?cityLabel) = 'en')
+        }}
+        LIMIT 20
+        """
+
     if "which cities are in germany" in q or "list cities in germany" in q:
         return """
         PREFIX dbo: <http://dbpedia.org/ontology/>
