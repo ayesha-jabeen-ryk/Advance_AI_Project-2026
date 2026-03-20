@@ -77,6 +77,7 @@ def build_query(question: str) -> str:
     # -----------------------------
 
     if "when was" in q and "born" in q:
+      import re
       match = re.search(r"when was (.+?) born", q)
       if match:
         person = match.group(1).strip()
