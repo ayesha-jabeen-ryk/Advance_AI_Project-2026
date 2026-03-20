@@ -5,17 +5,17 @@ Where was Albert Einstein born? | WORKING | 1
 When was Barack Obama born? | WORKING | 1
 When was Google founded? | WORKING | 1
 When did World War II start? | WORKING | 1
-Which cities are in Germany? | WORKING | 4
+Which cities are in Germany? | WORKING | 20
 Which films were directed by Christopher Nolan? | WORKING | 16
 Which universities are in Berlin? | WORKING | 20
-Which rivers are in France? | WORKING | 2
-Which cities in Germany have population greater than 1000000? | WORKING | 3
+Which rivers are in France? | WORKING | 1
+Which cities in Germany have population greater than 1000000? | WORKING | 21
 Which people were born after 1950? | WORKING | 20
-Which rivers in France are longer than 500000? | WORKING | 2
-Which films were directed by Christopher Nolan and starred Leonardo DiCaprio? | WORKING | 16
-Which universities in Berlin have more than 20000 students? | WORKING | 20
+Which rivers in France are longer than 500000? | ZERO_ROWS | 0
+Which films were directed by Christopher Nolan and starred Leonardo DiCaprio? | WORKING | 1
+Which universities in Berlin have more than 20000 students? | WORKING | 16
 Which scientists were born in Germany and died in the United States? | WORKING | 20
 Which people were born in Germany and received the Nobel Prize? | WORKING | 20
-Which films starring Leonardo DiCaprio were released in 2010? | ZERO_ROWS | 0
-Which films directed by Christopher Nolan were released after 2010? | WORKING | 16
-Who married Michelle Obama in 1992? | ZERO_ROWS | 0
+Which films starring Leonardo DiCaprio were released in 2010? | WORKING | 1
+Which films directed by Christopher Nolan were released after 2010? | ZERO_ROWS | 0
+Who married Michelle Obama in 1992? | WORKING | 1

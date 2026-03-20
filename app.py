@@ -1,15 +1,218 @@
-import streamlit as st
-import pandas as pd
+import re
 from urllib.parse import unquote
+
+import pandas as pd
+import streamlit as st
+
+from src.dbpedia_client import run_sparql_query
 from src.llm_client import generate_sparql_with_llm
 from src.query_builder import build_query
-from src.dbpedia_client import run_sparql_query
 
 st.set_page_config(
     page_title="DBpedia Question Answering System",
     page_icon="🌐",
     layout="wide",
 )
+
+
+def inject_custom_css() -> None:
+    st.markdown(
+        """
+        <style>
+        :root {
+            --bg: #f4f8fb;
+            --card: #ffffff;
+            --card-border: #d8e5f1;
+            --text: #18324a;
+            --muted: #5f7388;
+            --primary: #1f6aa5;
+            --primary-dark: #173b6c;
+            --accent: #2fb4c6;
+            --success-bg: #eef8f2;
+        }
+
+        .stApp {
+            background: linear-gradient(180deg, #eef5fb 0%, #f7fbff 45%, #f4f8fb 100%);
+            color: var(--text);
+        }
+
+        [data-testid="stHeader"] {
+            background: rgba(0, 0, 0, 0);
+        }
+
+        [data-testid="stSidebar"] {
+            background: #edf4fa;
+        }
+
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2.5rem;
+            max-width: 1200px;
+        }
+
+        .hero-card {
+            background: linear-gradient(135deg, #173b6c 0%, #1f6aa5 55%, #2fb4c6 100%);
+            border-radius: 24px;
+            padding: 2rem 2.2rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 14px 35px rgba(23, 59, 108, 0.18);
+            color: white;
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1.15;
+            margin: 0 0 0.55rem 0;
+            color: white;
+        }
+
+        .hero-subtitle {
+            font-size: 1.05rem;
+            margin: 0;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .section-card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.25rem 1.4rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 25px rgba(21, 52, 85, 0.06);
+        }
+
+        .section-title {
+            font-size: 1.55rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--primary-dark);
+        }
+
+        .section-text {
+            color: var(--text);
+            line-height: 1.7;
+        }
+
+        .example-list {
+            margin-top: 0.8rem;
+            color: var(--text);
+            line-height: 1.8;
+        }
+
+        .subtle-label {
+            display: inline-block;
+            padding: 0.32rem 0.7rem;
+            background: #eaf3fb;
+            color: var(--primary-dark);
+            border: 1px solid #cfe0ef;
+            border-radius: 999px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 0.85rem;
+        }
+
+        .stTextInput > div > div input {
+            background: #f9fcff;
+            color: var(--text);
+            border-radius: 14px;
+            border: 1px solid #c9dceb;
+            min-height: 48px;
+        }
+
+        .stTextInput > label,
+        .stMarkdown,
+        .stCaption,
+        .stSubheader,
+        .stText,
+        label,
+        p,
+        li {
+            color: var(--text) !important;
+        }
+
+        .stButton > button,
+        .stDownloadButton > button {
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            min-height: 44px;
+            box-shadow: 0 8px 16px rgba(31, 106, 165, 0.15);
+        }
+
+        .stButton > button {
+            background: linear-gradient(135deg, #1f6aa5 0%, #2fb4c6 100%);
+            color: white;
+        }
+
+        .stButton > button:hover,
+        .stDownloadButton > button:hover {
+            filter: brightness(1.03);
+            transform: translateY(-1px);
+        }
+
+        div[data-testid="stMetric"] {
+            background: white;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 0.7rem 0.9rem;
+            box-shadow: 0 8px 20px rgba(21, 52, 85, 0.05);
+        }
+
+        [data-testid="metric-container"] {
+            background: white;
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 0.8rem 1rem;
+            box-shadow: 0 8px 20px rgba(21, 52, 85, 0.05);
+        }
+
+        div[data-baseweb="tab-list"] {
+            gap: 0.5rem;
+        }
+
+        div[data-baseweb="tab"] {
+            background: #edf4fa;
+            border: 1px solid #d6e4f1;
+            border-radius: 12px;
+            padding: 0.55rem 1rem;
+        }
+
+        div[data-baseweb="tab"][aria-selected="true"] {
+            background: #173b6c;
+            color: white !important;
+            border-color: #173b6c;
+        }
+
+        .result-card {
+            background: white;
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 1rem 1.15rem;
+            margin-bottom: 0.9rem;
+            box-shadow: 0 10px 24px rgba(21, 52, 85, 0.06);
+        }
+
+        .result-answer {
+            background: var(--success-bg);
+            border: 1px solid #cfe8d8;
+            color: #1f5f35;
+            border-radius: 14px;
+            padding: 0.9rem 1rem;
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .footer-note {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 1.2rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
@@ -47,6 +250,23 @@ def get_first_entity_uri(bindings: list[dict]) -> str | None:
             if raw_value.startswith("http://dbpedia.org/resource/"):
                 return raw_value
     return None
+
+
+def sanitize_generated_query(query: str) -> str:
+    if not query:
+        return ""
+
+    cleaned = query.strip()
+
+    fenced_match = re.search(r"```(?:sparql)?\s*(.*?)```", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    if fenced_match:
+        cleaned = fenced_match.group(1).strip()
+
+    keyword_match = re.search(r"(PREFIX\s+\w+:.*|SELECT\s+.*|ASK\s+.*)", cleaned, flags=re.IGNORECASE | re.DOTALL)
+    if keyword_match:
+        cleaned = keyword_match.group(1).strip()
+
+    return cleaned
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
@@ -127,66 +347,72 @@ def clear_state():
     st.session_state["last_query"] = ""
     st.session_state["last_error"] = ""
     st.session_state["last_question"] = ""
+    st.session_state["query_source"] = ""
 
 
-if "question_input" not in st.session_state:
-    st.session_state["question_input"] = ""
+DEFAULT_SESSION_STATE = {
+    "question_input": "",
+    "last_result": None,
+    "last_query": "",
+    "last_error": "",
+    "last_question": "",
+    "query_source": "",
+}
 
-if "last_result" not in st.session_state:
-    st.session_state["last_result"] = None
+for key, value in DEFAULT_SESSION_STATE.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
-if "last_query" not in st.session_state:
-    st.session_state["last_query"] = ""
 
-if "last_error" not in st.session_state:
-    st.session_state["last_error"] = ""
-
-if "last_question" not in st.session_state:
-    st.session_state["last_question"] = ""
-
+inject_custom_css()
 
 # -------------------------
-# Header
+# Header 
 # -------------------------
-icon_col, title_col = st.columns([1, 14])
-
-with icon_col:
-    st.markdown("## 🌐")
-
-with title_col:
-    st.title("DBpedia Question Answering System")
-    st.caption(
-        "Ask natural language questions about people, places, films, dates, and more using the DBpedia Knowledge Graph."
-    )
-
-st.markdown("---")
+st.markdown(
+    """
+    <div class="hero-card">
+        <div class="subtle-label">Advanced Machine Learning Final Project</div>
+        <div class="hero-title">🌐 DBpedia Question Answering System</div>
+        <p class="hero-subtitle">
+            Ask natural language questions about people, places, films, dates, and more.
+            The system builds SPARQL queries, retrieves answers from DBpedia, and uses an LLM fallback for unsupported questions.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # -------------------------
 # Intro Section
 # -------------------------
-with st.container(border=True):
-    st.subheader("Ask a Question")
-    st.write(
-        "Enter a question in natural language. The system generates a SPARQL query, retrieves results from DBpedia, and displays the answer in a user-friendly format.The system first tries rule-based SPARQL generation and then uses SAIA as a fallback for unsupported questions."
-    )
-
-    st.markdown("**Example questions:**")
-    st.markdown(
-        """
-- What is the capital of Germany?
-- What is the capital of France?
-- Who is the spouse of Barack Obama?
-- When was Barack Obama born?
-- Which cities are in Germany?
-- Cities in Germany with population greater than 1000000
-- Films directed by Christopher Nolan and starring Leonardo DiCaprio
-"""
-    )
+st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>Ask a Question</div>", unsafe_allow_html=True)
+st.markdown(
+    """
+    <div class='section-text'>
+        Enter a question in natural language. The system first tries rule-based SPARQL generation.
+        If the question is not supported by the rule-based layer, it uses the SAIA-backed LLM fallback.
+    </div>
+    <div class='example-list'>
+        <b>Example questions:</b><br>
+        • What is the capital of Germany?<br>
+        • Who is the spouse of Barack Obama?<br>
+        • When was Barack Obama born?<br>
+        • Which cities are in Germany?<br>
+        • Cities in Germany with population greater than 1000000<br>
+        • Films directed by Christopher Nolan and starring Leonardo DiCaprio
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+st.markdown("</div>", unsafe_allow_html=True)
 
 # -------------------------
 # Input Section
 # -------------------------
-st.markdown("### Question Input")
+st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>Question Input</div>", unsafe_allow_html=True)
 
 question = st.text_input(
     "Enter your question:",
@@ -202,35 +428,39 @@ with btn_col1:
 with btn_col2:
     st.button("Reset", width="stretch", key="reset_btn", on_click=clear_state)
 
+st.markdown("</div>", unsafe_allow_html=True)
+
 if get_answer_clicked:
     st.session_state["last_question"] = question
+    st.session_state["last_error"] = ""
+    st.session_state["last_result"] = None
+    st.session_state["last_query"] = ""
+    st.session_state["query_source"] = ""
 
     if not question.strip():
         st.session_state["last_error"] = "Please enter a question."
-        st.session_state["last_result"] = None
-        st.session_state["last_query"] = ""
     else:
         query = build_query(question)
 
-        if not query:
+        if query:
+            st.session_state["query_source"] = "Rule-based"
+        else:
             try:
-                query = generate_sparql_with_llm(question)
+                query = sanitize_generated_query(generate_sparql_with_llm(question))
+                st.session_state["query_source"] = "LLM fallback"
             except Exception as exc:
                 st.session_state["last_error"] = f"LLM fallback failed: {exc}"
-                st.session_state["last_result"] = None
-                st.session_state["last_query"] = ""
                 query = ""
 
         st.session_state["last_query"] = query
 
         if not query or query.strip().upper() == "UNSUPPORTED":
-            st.session_state["last_error"] = "This question type is not supported yet."
-            st.session_state["last_result"] = None
+            if not st.session_state["last_error"]:
+                st.session_state["last_error"] = "This question type is not supported yet."
         else:
             try:
                 result = cached_run_query(query)
                 st.session_state["last_result"] = result
-                st.session_state["last_error"] = ""
             except Exception as exc:
                 st.session_state["last_result"] = None
                 st.session_state["last_error"] = f"Error while querying DBpedia: {exc}"
@@ -241,16 +471,15 @@ if get_answer_clicked:
 if st.session_state["last_error"]:
     st.error(st.session_state["last_error"])
 
-if st.session_state["last_result"]:
+if st.session_state["last_result"] is not None:
     result = st.session_state["last_result"]
     bindings = extract_bindings(result)
     df = bindings_to_dataframe(bindings) if bindings else pd.DataFrame()
     saved_question = st.session_state.get("last_question", "")
 
-    st.markdown("---")
-    st.markdown("## Results Overview")
+    st.markdown("<div class='section-title' style='margin-top:0.3rem;'>Results Overview</div>", unsafe_allow_html=True)
 
-    overview_col1, overview_col2, overview_col3 = st.columns(3)
+    overview_col1, overview_col2, overview_col3, overview_col4 = st.columns(4)
 
     with overview_col1:
         st.metric("Question Type", detect_question_category(saved_question))
@@ -259,14 +488,15 @@ if st.session_state["last_result"]:
         st.metric("Rows Returned", len(bindings))
 
     with overview_col3:
+        st.metric("Query Source", st.session_state.get("query_source", "Unknown"))
+
+    with overview_col4:
         st.metric("Status", "Success")
 
     tab1, tab2, tab3 = st.tabs(["Answer", "SPARQL Query", "Details"])
 
-    # -------------------------
-    # Tab 1: Answer
-    # -------------------------
     with tab1:
+        st.markdown("<div class='result-card'>", unsafe_allow_html=True)
         st.subheader("Answer")
 
         if df.empty:
@@ -274,24 +504,31 @@ if st.session_state["last_result"]:
         else:
             if len(df) == 1 and len(df.columns) == 1:
                 answer_value = str(df.iloc[0, 0])
-                st.success(answer_value)
+                st.markdown(f"<div class='result-answer'>{answer_value}</div>", unsafe_allow_html=True)
             elif len(df) == 1:
                 st.dataframe(df, width="stretch", hide_index=True)
             else:
                 st.info("Multiple results found. Displaying them in a table.")
                 st.dataframe(df, width="stretch", hide_index=True)
 
-    # -------------------------
-    # Tab 2: SPARQL Query
-    # -------------------------
-    with tab2:
-        st.subheader("Generated SPARQL Query")
-        st.code(st.session_state["last_query"], language="sparql")
+            csv_data = df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "Download results as CSV",
+                data=csv_data,
+                file_name="dbpedia_results.csv",
+                mime="text/csv",
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    # -------------------------
-    # Tab 3: Details
-    # -------------------------
+    with tab2:
+        st.markdown("<div class='result-card'>", unsafe_allow_html=True)
+        st.subheader("Generated SPARQL Query")
+        st.caption(f"Source: {st.session_state.get('query_source', 'Unknown')}")
+        st.code(st.session_state["last_query"], language="sparql")
+        st.markdown("</div>", unsafe_allow_html=True)
+
     with tab3:
+        st.markdown("<div class='result-card'>", unsafe_allow_html=True)
         st.subheader("Entity Details")
 
         entity_uri = get_first_entity_uri(bindings)
@@ -331,3 +568,9 @@ if st.session_state["last_result"]:
                         st.success(short_summary)
                     else:
                         st.warning("No summary available for this entity in DBpedia.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown(
+    "<div class='footer-note'>Designed for your DBpedia QA final project submission by Ayesha Jabeen.</div>",
+    unsafe_allow_html=True,
+)
